@@ -1,10 +1,8 @@
 require('dotenv').config();
-//assume we don't need database connection just yet... firebase?
-//require('./config/authStrategy'); //needed?
-const mongoose = require("mongoose"); //if MongoDB
+// require('./config/connection'); 
 const express = require("express");
-const session = require("express-session");
-const passport = require("passport");
+// const session = require("express-session");
+// const passport = require("passport");
 
 const helmet = require("helmet");
 const morgan = require("morgan");
@@ -103,26 +101,11 @@ app.use((err, req, res, next) => {
     });
 });
 
-//Success
 app.get("/", (req, res, next) => {
 res
     .status(200)
     .json({ success: { message: "This route points to the Home page" } });
 });
-
-
-//DB connection re: MongoDB
-/*
-mongoose
-  .connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => {
-    console.log("Connected to MongoDB");
-    app.listen(PORT, () => console.log(`Server listening on ${PORT}`));
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-  });
-*/
   
 app.listen(PORT, () => {
 console.log(

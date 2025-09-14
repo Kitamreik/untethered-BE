@@ -3,7 +3,8 @@ const mongoose = require("mongoose");
 
 const BookingSchema = new mongoose.Schema({
   packageId: { type: String, required: true },
-  purchaseId: { type: mongoose.Schema.Types.ObjectId, ref: "Purchase" },
+  packageName: { type: String, required: true },
+  purchaseId: { type: mongoose.Schema.Types.ObjectId, ref: "Purchase" },  
   sessionDate: { type: Date, required: true },
   purchaserEmail: { type: String },
   status: { type: String, default: "booked" }, // booked, confirmed, completed, canceled

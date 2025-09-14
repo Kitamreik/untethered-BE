@@ -75,6 +75,7 @@ async function createPaymentIntent(req, res, next) {
 
     const purchase = await Purchase.create({
       packageId,
+      packageName,
       amount: price,
       currency: "usd",
       stripePaymentIntentId: paymentIntent.id,
@@ -92,7 +93,7 @@ async function createPaymentIntent(req, res, next) {
 
 async function logSession(req, res, next) {
   try {
-    const { packageId, stripePaymentIntentId, purchaserEmail } = req.body;
+    const { packageId, packageName, stripePaymentIntentId, purchaserEmail } = req.body;
 
     if (!packageId || !stripePaymentIntentId) {
       return res.status(400).json({ error: "Missing packageId or stripePaymentIntentId" });

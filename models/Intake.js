@@ -7,6 +7,7 @@ const IntakeSchema = new mongoose.Schema({
   services: { type: String, required: true },
   tier: { type: String, required: true },
   questions: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
 module.exports = mongoose.model("Intake", IntakeSchema);
