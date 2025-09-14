@@ -1,14 +1,17 @@
 require('dotenv').config();
-// require('./config/connection'); 
+require('./config/connection'); 
 const express = require("express");
 // const session = require("express-session");
 // const passport = require("passport");
 
 const helmet = require("helmet");
 const morgan = require("morgan");
+const bodyParser = require("body-parser");
 const cors = require("cors");
-
 const path = require("node:path");
+
+//Email Automation
+const { startAgenda } = require("./agenda");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -30,7 +33,6 @@ let purchases = [];
 const adminRoutes = require("./routes/adminRoutes");
 const publicRoutes = require("./routes/publicRoutes");
 const { handleStripeWebhook } = require("./Ctrl/webhookCtrl");
-
 
 //Webhook: Route gets raw body, mount before express.json()
 app.post(
@@ -56,7 +58,8 @@ app.post(
 
 app.use(helmet()); 
 app.use(morgan("combined")); 
-app.use(cors({ credentials: true, origin: true })); 
+app.use(cors({ credentials: true, origin: true }));
+app.use(bodyParser.json()); 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));

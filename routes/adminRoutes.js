@@ -2,13 +2,9 @@
 const express = require("express");
 const router = express.Router();
 const adminAuth = require("../middleware/adminAuth");
-const { getPurchases, getBookings, updateBookingStatus } = require("../ctrl/adminCtrl");
+const { getPurchases, getBookings, updateBookingStatus, createIntake, getIntakes, adminSummary } = require("../ctrl/adminCtrl");
 
-router.get("/", async (req, res, next)  => {
-    res
-    .status(200)
-    .json({ success: { message: "This route triggers admin side routes" } });
-})
+router.get("/", adminSummary);
 
 //List all sessions (admin-only)
 router.get("/sessions", async (req, res) => {
@@ -21,6 +17,9 @@ router.get("/sessions", async (req, res) => {
       console.error(err);
     }
 });
+
+router.post("/intake", adminAuth, createIntake);
+router.get("/intake", adminAuth, getIntakes);
 
 router.get("/purchases", adminAuth, getPurchases);
 router.get("/bookings", adminAuth, getBookings);

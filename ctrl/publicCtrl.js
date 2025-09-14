@@ -1,24 +1,91 @@
 // server/controllers/publicController.js
 const Purchase = require("../models/Purchase");
 const Booking = require("../models/Booking");
-const Intake = require ("../models/Intake.js");
+const Intake = require ("../models/Intake");
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+//Email Automation
+const { sendEmail } = require("../utils/emailService");
+const { agenda } = require("../agenda");
+const { addEventToCalendar, createEvent, deleteEvent } = require("../utils/calendarService");
 
-//Intake Log Form from FE
-async function createIntake(req, res, next) {
+async function createPaymentIntent(req, res, next) {
   try {
-    const intake = await Intake.create(req.body);
-    res.json(intake);
+    const { packageId, price, packageName, purchaserEmail } = req.body;
+
+    if (!packageId || !price) {
+      return res.status(400).json({ error: "Missing packageId or price" });
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: price,
+      currency: "usd",
+      metadata: { packageId, purchaserEmail, packageName: packageName || "unknown" },
+      receipt_email: purchaserEmail,
+    });
+
+    const purchase = await Purchase.create({
+      packageId,
+      packageName,
+      amount: price,
+      currency: "usd",
+      stripePaymentIntentId: paymentIntent.id,
+      customerEmail: purchaserEmail,
+      status: "pending",
+      createdAt: new Date(),
+    });
+
+    res.json({ clientSecret: paymentIntent.client_secret, id: paymentIntent.id, purchase });
   } catch (err) {
-    res.status(500).json({ error: "Failed to save intake" });
+    console.error("createPaymentIntent error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 }
 
-async function getIntakes(req, res, next) {
+async function logSession(req, res, next) {
   try {
-    const intakes = await Intake.find().sort({ createdAt: -1 });
-    res.json(intakes);
+    const { packageId, packageName, amount = 0, currency = "usd", purchaserEmail, stripePaymentIntentId, status } = req.body;
+    
+    //OG: packageId, packageName, stripePaymentIntentId, purchaserEmail
+
+    if (!packageId || !stripePaymentIntentId) {
+      return res.status(400).json({ error: "Missing packageId or stripePaymentIntentId" });
+    }
+
+    const purchase = await Purchase.findOneAndUpdate(
+      { stripePaymentIntentId },
+      { status: "paid", updatedAt: new Date() },
+      { new: true }
+    );
+
+    if (!purchase) {
+      return res.status(404).json({ error: "Purchase not found" });
+    }
+
+    const booking = await Booking.create({
+      packageId,
+      purchaseId: purchase._id,
+      //added
+      packageName: packageName || "unknown",
+      amount,
+      currency,
+      customerEmail: purchaserEmail || "unknown",
+      stripePaymentIntentId: stripePaymentIntentId || "unknown",
+      //added
+      status: "unbooked",
+      createdAt: new Date(),
+    });
+
+    // notify admin
+    await sendEmail({
+      to: process.env.ADMIN_EMAIL,
+      subject: "New purchase logged",
+      html: `<p>Purchase logged: ${purchase.packageName} - ${purchase.customerEmail}</p>`,
+    });
+
+    res.json({ status: "ok", booking });
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch intakes" });
+    console.error("logSession error:", err);
+    res.status(500).json({ error: "Server error" });
   }
 }
 
@@ -26,6 +93,11 @@ async function getIntakes(req, res, next) {
 async function bookSession(req, res, next) {
   try {
     const { packageId, sessionDate, purchaserEmail, stripePaymentIntentId } = req.body;
+
+    if (!packageId || !sessionDate || !purchaserEmail) {
+      return res.status(400).json({ error: "packageId, sessionDate and purchaserEmail required" });
+    }
+
     // Try to find matching Purchase (logged by webhook)
     let purchase = null;
     if (stripePaymentIntentId) {
@@ -46,10 +118,65 @@ async function bookSession(req, res, next) {
 
     const booking = await Booking.create({
       packageId,
+      packageName: purchase.packageName || "unknown",
       purchaseId: purchase._id,
       sessionDate: new Date(sessionDate),
       purchaserEmail: purchaserEmail
     });
+
+    // schedule reminders (7 and 3 days before if in future)
+    const sessionDt = new Date(sessionDate);
+    const jobIds = [];
+    const endDt = new Date(sessionDt.getTime() + 60 * 60 * 1000); // default 1h
+
+    // add event to Google Calendar
+    try {
+      const event = await addEventToCalendar({
+        summary: `Coaching Session - ${purchaserEmail}`,
+        description: `Package: ${purchase.packageName}`,
+        start: sessionDt.toISOString(),
+        end: endDt.toISOString(),
+      });
+
+      console.log("Google Calendar event created:", event.htmlLink);
+    } catch (err) {
+      console.error("Failed to create calendar event:", err.message);
+    }
+
+    //Reminder emails
+    const scheduleIfFuture = async (daysPrior, label) => {
+      const sendAt = new Date(sessionDt.getTime() - daysPrior * 24 * 60 * 60 * 1000);
+      if (sendAt > new Date()) {
+        const job = await agenda.schedule(sendAt, "send-reminder-email", {
+          bookingId: booking._id.toString(),
+          reminderType: `${daysPrior}-day`,
+        });
+        jobIds.push(job.attrs._id.toString());
+      }
+    };
+
+    await scheduleIfFuture(7);
+    await scheduleIfFuture(3);
+    await scheduleIfFuture(1); //MVP request
+
+    booking.reminderJobIds = jobIds;
+    await booking.save();
+
+    // send immediate confirmation email to client
+    const clientHtml = `
+      <p>Hi ${purchaserEmail},</p>
+      <p>Thanks — your booking for ${new Date(sessionDt).toLocaleString()} is confirmed.</p>
+      <p>If you need to cancel, reply to this email.</p>
+    `;
+    await sendEmail({ to: purchaserEmail, subject: "Booking confirmation", html: clientHtml });
+
+    // notify admin
+    await sendEmail({
+      to: process.env.ADMIN_EMAIL,
+      subject: "New booking created",
+      html: `<p>New booking: ${booking._id} for ${purchaserEmail} on ${new Date(sessionDt).toLocaleString()}</p>`,
+    });
+
 
     res.json({ status: "ok", booking });
   } catch (err) {
@@ -58,75 +185,11 @@ async function bookSession(req, res, next) {
   }
 }
 
-async function createPaymentIntent(req, res, next) {
-  try {
-    const { packageId, price, purchaserEmail } = req.body;
-
-    if (!packageId || !price) {
-      return res.status(400).json({ error: "Missing packageId or price" });
-    }
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: price,
-      currency: "usd",
-      metadata: { packageId, purchaserEmail },
-      receipt_email: purchaserEmail,
-    });
-
-    const purchase = await Purchase.create({
-      packageId,
-      packageName,
-      amount: price,
-      currency: "usd",
-      stripePaymentIntentId: paymentIntent.id,
-      customerEmail: purchaserEmail,
-      status: "pending",
-      createdAt: new Date(),
-    });
-
-    res.json({ clientSecret: paymentIntent.client_secret, purchase });
-  } catch (err) {
-    console.error("createPaymentIntent error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-}
-
-async function logSession(req, res, next) {
-  try {
-    const { packageId, packageName, stripePaymentIntentId, purchaserEmail } = req.body;
-
-    if (!packageId || !stripePaymentIntentId) {
-      return res.status(400).json({ error: "Missing packageId or stripePaymentIntentId" });
-    }
-
-    const purchase = await Purchase.findOneAndUpdate(
-      { stripePaymentIntentId },
-      { status: "paid", updatedAt: new Date() },
-      { new: true }
-    );
-
-    if (!purchase) {
-      return res.status(404).json({ error: "Purchase not found" });
-    }
-
-    const booking = await Booking.create({
-      packageId,
-      purchaseId: purchase._id,
-      purchaserEmail,
-      status: "unbooked",
-      createdAt: new Date(),
-    });
-
-    res.json({ status: "ok", booking });
-  } catch (err) {
-    console.error("logSession error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-}
-
 async function cancelSession(req, res, next) {
   try {
-    const { paymentIntentId } = req.body;
+    //Base
+    /*
+     const { paymentIntentId } = req.body;
 
     if (!paymentIntentId) {
       return res.status(400).json({ error: "Missing paymentIntentId" });
@@ -138,12 +201,31 @@ async function cancelSession(req, res, next) {
       { stripePaymentIntentId: paymentIntentId },
       { status: "canceled", updatedAt: new Date() }
     );
+    */
+   
+    const { paymentIntentId, bookingId } = req.body;
+    // Cancel Stripe PaymentIntent if provided
+    if (paymentIntentId) {
+      try {
+        await stripe.paymentIntents.cancel(paymentIntentId);
+      } catch (err) {
+        console.warn("stripe cancel error:", err.message || err);
+      }
+    }
 
-    res.json({ status: "ok", canceledIntent });
+    // If bookingId provided, cancel agenda jobs for that booking
+    if (bookingId) {
+      // Cancel all agenda jobs with this bookingId in data
+      await agenda.cancel({ "data.bookingId": bookingId });
+      // Optionally update booking doc
+      await Booking.findByIdAndUpdate(bookingId, { reminderJobIds: [] }).catch(() => {});
+    }
+
+    res.json({ status: "ok" }); //OG: include canceledIntent
   } catch (err) {
     console.error("cancelSession error:", err);
     res.status(500).json({ error: "Server error" });
   }
 }
 
-module.exports = { bookSession, createPaymentIntent, logSession, cancelSession, createIntake, getIntakes };
+module.exports = { bookSession, createPaymentIntent, logSession, cancelSession };
