@@ -1,6 +1,26 @@
 // server/controllers/publicController.js
 const Purchase = require("../models/Purchase");
 const Booking = require("../models/Booking");
+const Intake = require ("../models/Intake.js");
+
+//Intake Log Form from FE
+async function createIntake(req, res, next) {
+  try {
+    const intake = await Intake.create(req.body);
+    res.json(intake);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save intake" });
+  }
+}
+
+async function getIntakes(req, res, next) {
+  try {
+    const intakes = await Intake.find().sort({ createdAt: -1 });
+    res.json(intakes);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch intakes" });
+  }
+}
 
 // Called by frontend after payment success to book a session
 async function bookSession(req, res, next) {
@@ -125,4 +145,4 @@ async function cancelSession(req, res, next) {
   }
 }
 
-module.exports = { bookSession, createPaymentIntent, logSession, cancelSession };
+module.exports = { bookSession, createPaymentIntent, logSession, cancelSession, createIntake, getIntakes };
