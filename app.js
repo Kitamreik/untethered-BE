@@ -1,7 +1,7 @@
 require('dotenv').config();
 //assume we don't need database connection just yet... firebase?
 //require('./config/authStrategy'); //needed?
-const mongoose = require("mongoose");
+const mongoose = require("mongoose"); //if MongoDB
 const express = require("express");
 const session = require("express-session");
 const passport = require("passport");
@@ -16,23 +16,45 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 //Stripe
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
-//Upgrade
-/*
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: "2022-11-15" });
-*/
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
+
+//Internal check - shut down process if no key access
+if (!ADMIN_API_KEY) {
+  console.error("ADMIN_API_KEY is missing from environment!");
+  process.exit(1);
+}
+
+// --- Mock DB (replace with MongoDB/Firebase) ---
+let sessions = [];
+let purchases = [];
 
 //Routers
 const adminRoutes = require("./routes/adminRoutes");
 const publicRoutes = require("./routes/publicRoutes");
 const { handleStripeWebhook } = require("./Ctrl/webhookCtrl");
 
-//Route gets raw body, mount before express.json()
+
+//Webhook: Route gets raw body, mount before express.json()
 app.post(
     "/webhook",
     express.raw({ type: "application/json" }),
-    (req, res) => handleStripeWebhook(req, res, stripe)
-  );
+    async (req, res, next) => 
+      handleStripeWebhook(req, res, next, stripe)
+);
+
+//Testing Webhook:
+/*
+ 1. Test at localhost:PORT/webhook
+ 2. CLI - stripe login
+ 3. Enter --> complete auth process
+ 4. forward snapshot events to your local listener --> stripe listen --forward-to localhost:4242
+  5. Event tracking from controller: stripe listen --events payment_intent.succeeded,customer.created,payment_method.attached --forward-to localhost:4242 
+  6. To check webhook signatures, use the {{WEBHOOK_SIGNING_SECRET}} from the initial output of the listen command.
+  7. Trigger Test Events: stripe trigger (event name)
+  ---
+ ... stripe products create \ (information: --name="", etc)
+ 5. Look for the product identifier (in id) in the response object. In env: Please note: this key will expire after 90 days, at which point you'll need to re-authenticate.
+*/
 
 app.use(helmet()); 
 app.use(morgan("combined")); 
@@ -60,15 +82,13 @@ app.use(passport.initialize());
 app.use(passport.session());
 */
 
-// --- Mock DB (replace with MongoDB/Firebase) ---
-let sessions = [];
-let purchases = [];
 
 //Route used in app
 //stripe
-app.use("/api/admin", adminRoutes);       // protected admin endpoints
-app.use("/api", publicRoutes);            // public endpoints (book-session, etc.)
+app.use("/api/admin", adminRoutes);  //Success, base   
+app.use("/api", publicRoutes); //Success
 
+//Err handling middleware
 app.use((err, req, res, next) => {
     // if (err.code === 11000) {
     //   return res.status(err.status || 400).json({
@@ -82,89 +102,14 @@ app.use((err, req, res, next) => {
       statusCode: err.status || 500,
     });
 });
-  
+
+//Success
 app.get("/", (req, res, next) => {
 res
     .status(200)
     .json({ success: { message: "This route points to the Home page" } });
 });
 
-//Test
-app.post("/api/create-payment-intent", async (req, res) => {
-    try {
-      const { packageId, price } = req.body;
-  
-      const packagePrices = {
-        pkg1: 5000,
-        pkg2: 22500,
-        pkg3: 40000,
-      };
-  
-      const amount = packagePrices[packageId];
-      if (!amount) return res.status(400).json({ error: "Invalid package" });
-  
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: price, // price is already passed in cents
-        currency: "usd",
-        metadata: { packageId },
-      });
-  
-      res.json({ client_secret: paymentIntent.client_secret });
-    } catch (err) {
-        console.error("Error creating PaymentIntent:", err);
-        res.status(500).json({ error: "Failed to create PaymentIntent" });
-    }
-  });
-
-// --- Route 2: Log Session Purchase ---
-app.post("/api/log-session", (req, res) => {
-    try {
-      const { packageId } = req.body;
-  
-      purchases.push({
-        packageId,
-        timestamp: new Date().toISOString(),
-      });
-  
-      res.json({ message: "Session purchase logged", purchases });
-    } catch (err) {
-      console.error("Error logging session:", err);
-      res.status(500).json({ error: "Failed to log session" });
-    }
-  });
-  
-  // --- Route 3: Book a Session ---
-  app.post("/api/book-session", (req, res) => {
-    try {
-      const { packageId, sessionDate } = req.body;
-  
-      sessions.push({
-        packageId,
-        sessionDate,
-        bookedAt: new Date().toISOString(),
-      });
-  
-      res.json({ message: "Session booked", sessions });
-    } catch (err) {
-      console.error("Error booking session:", err);
-      res.status(500).json({ error: "Failed to book session" });
-    }
-  });
-  
-
-/*
-Frontend-Backend Flow
-
-User selects a package.
-
-CheckoutForm calls /api/create-payment-intent → Stripe PaymentIntent.
-
-Stripe handles card securely on the frontend.
-
-Payment success triggers /api/log-session.
-
-User selects a session date → /api/book-session.
-*/
 
 //DB connection re: MongoDB
 /*

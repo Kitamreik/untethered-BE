@@ -2,7 +2,7 @@
 const Purchase = require("../models/Purchase");
 const Booking = require("../models/Booking");
 
-async function getPurchases(req, res) {
+async function getPurchases(req, res, next) {
   try {
     const purchases = await Purchase.find().sort({ createdAt: -1 }).limit(100);
     res.json({ purchases });
@@ -12,7 +12,7 @@ async function getPurchases(req, res) {
   }
 }
 
-async function getBookings(req, res) {
+async function getBookings(req, res, next) {
   try {
     const bookings = await Booking.find().sort({ createdAt: -1 }).limit(200).populate("purchaseId");
     res.json({ bookings });
@@ -22,7 +22,7 @@ async function getBookings(req, res) {
   }
 }
 
-async function updateBookingStatus(req, res) {
+async function updateBookingStatus(req, res, next) {
   try {
     const { id } = req.params;
     const { status } = req.body;
