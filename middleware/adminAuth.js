@@ -1,10 +1,8 @@
 // server/middleware/adminAuth.js
 module.exports = function adminAuth(req, res, next) {
-    const key = req.headers["x-admin-api-key"];
+    const key = req.header["x-admin-api-key"];
     if (!key || key !== process.env.ADMIN_API_KEY) {
-      return res.status(401).json({ error: "Unauthorized" });
+      return res.status(401).json({ error: "Unauthorized: invalid API key" });
     }
     next();
   };
-
-//Use proper authentication (OAuth/JWT) for production.

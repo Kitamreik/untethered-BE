@@ -5,7 +5,7 @@ const Intake = require ("../models/Intake");
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 //Email Automation
 const { sendEmail } = require("../utils/emailService");
-const { agenda } = require("../agenda");
+const { agenda } = require("../utils/agenda");
 const { addEventToCalendar, createEvent, deleteEvent } = require("../utils/calendarService");
 
 async function createPaymentIntent(req, res, next) {
@@ -228,4 +228,27 @@ async function cancelSession(req, res, next) {
   }
 }
 
-module.exports = { bookSession, createPaymentIntent, logSession, cancelSession };
+
+//Intake Log Form from FE
+async function createIntake(req, res, next) {
+  try {
+    console.log("BE intake received: ", req.body);
+    const newIntake = new Intake(req.body);
+    newIntake.save();
+    res.status(201).json(intake, {success: true});
+  } catch (err) {
+    console.error("Error saving intake:", err);
+    res.status(500).json({success: false, error: "Failed to save intake" });
+  }
+}
+
+async function getIntakes(req, res, next) {
+  try {
+    const intakes = await Intake.find().sort({ createdAt: -1 });
+    res.json(intakes);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch intakes" });
+  }
+}
+
+module.exports = { bookSession, createPaymentIntent, logSession, cancelSession, createIntake, getIntakes };

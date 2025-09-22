@@ -11,7 +11,7 @@ const cors = require("cors");
 const path = require("node:path");
 
 //Email Automation
-const { startAgenda } = require("./agenda");
+const { startAgenda } = require("./utils/agenda");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -86,8 +86,8 @@ app.use(passport.session());
 
 //Route used in app
 //stripe
-app.use("/api/admin", adminRoutes);  //Success, base   
-app.use("/api", publicRoutes); //Success
+app.use("/api/admin", adminRoutes);  //Success, getPurchases, getBookings, updateBookingStatus, adminSummary  
+app.use("/api", publicRoutes); //Success, bookSession, createPaymentIntent, logSession, cancelSession, createIntake, getIntakes
 
 //Err handling middleware
 app.use((err, req, res, next) => {

@@ -1,28 +1,16 @@
 // server/routes/adminRoutes.js
 const express = require("express");
+const mongoose = require("mongoose");
 const router = express.Router();
 const adminAuth = require("../middleware/adminAuth");
-const { getPurchases, getBookings, updateBookingStatus, createIntake, getIntakes, adminSummary } = require("../ctrl/adminCtrl");
+const { getPurchases, getBookings, updateBookingStatus, adminSummary } = require("../ctrl/adminCtrl");
 
-router.get("/", adminSummary);
-
-//List all sessions (admin-only)
-router.get("/sessions", async (req, res) => {
-    try {
-      // Query database for all booked sessions
-    //   const sessions = await db.collection("sessions").find().toArray();
-    console.log(sessions, "session tracking")
-      res.json({ sessions });
-    } catch (err) {
-      console.error(err);
-    }
-});
-
-router.post("/intake", adminAuth, createIntake);
-router.get("/intake", adminAuth, getIntakes);
+//Quick Check
+router.get("/", (req, res) => res.json({ status: 200 }));
+router.get("/health", adminSummary);
 
 router.get("/purchases", adminAuth, getPurchases);
 router.get("/bookings", adminAuth, getBookings);
-router.patch("/bookings/:id", adminAuth, updateBookingStatus);
+router.patch("/bookings/:id", adminAuth, updateBookingStatus); //post if not operational
 
 module.exports = router;

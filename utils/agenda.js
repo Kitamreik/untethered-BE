@@ -2,8 +2,8 @@
 const Agenda = require("agenda");
 const mongoose = require("mongoose");
 const { sendEmail } = require("./emailService");
-const Booking = require("./models/Booking"); 
-const Purchase = require("./models/Purchase");
+const Booking = require("../models/Booking"); 
+const Purchase = require("../models/Purchase");
 
 const mongoConnString = process.env.MONGODB_URI;
 if (!mongoConnString) throw new Error("MONGODB_URI is required");
