@@ -10,4 +10,4 @@ const IntakeSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });
 
-module.exports = mongoose.model("Clients", IntakeSchema);
+module.exports = mongoose.model("Intake", IntakeSchema);

@@ -53,7 +53,7 @@ app.post(
   7. Trigger Test Events: stripe trigger (event name)
   ---
  ... stripe products create \ (information: --name="", etc)
- 5. Look for the product identifier (in id) in the response object. In env: Please note: this key will expire after 90 days, at which point you'll need to re-authenticate.
+  8. Look for the product identifier (in id) in the response object. In env: Please note: this key will expire after 90 days, at which point you'll need to re-authenticate.
 */
 
 app.use(helmet()); 

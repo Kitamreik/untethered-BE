@@ -229,26 +229,6 @@ async function cancelSession(req, res, next) {
 }
 
 
-//Intake Log Form from FE
-async function createIntake(req, res, next) {
-  try {
-    console.log("BE intake received: ", req.body);
-    const newIntake = new Intake(req.body);
-    newIntake.save();
-    res.status(201).json(intake, {success: true});
-  } catch (err) {
-    console.error("Error saving intake:", err);
-    res.status(500).json({success: false, error: "Failed to save intake" });
-  }
-}
 
-async function getIntakes(req, res, next) {
-  try {
-    const intakes = await Intake.find().sort({ createdAt: -1 });
-    res.json(intakes);
-  } catch (err) {
-    res.status(500).json({ error: "Failed to fetch intakes" });
-  }
-}
 
-module.exports = { bookSession, createPaymentIntent, logSession, cancelSession, createIntake, getIntakes };
+module.exports = { bookSession, createPaymentIntent, logSession, cancelSession };
