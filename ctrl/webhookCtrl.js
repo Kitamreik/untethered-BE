@@ -10,16 +10,16 @@ const keyCheck = {
 //Docs - Webhook
 // If you are using an endpoint defined with the API or dashboard, look in your webhook settings
 // at https://dashboard.stripe.com/webhooks
-//const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 async function handleStripeWebhook(req, res, stripe) {
   const signature = req.headers["stripe-signature"];
-  let event = req.body; //basic
-  // let event = stripe.webhooks.constructEvent(
-  //   req.body,
-  //   signature,
-  //   endpointSecret
-  // );
+  // let event = req.body; //basic
+  let event = stripe.webhooks.constructEvent(
+    req.body,
+    signature,
+    endpointSecret
+  );
 
   const context = event.context;
   if (!context) {
@@ -89,7 +89,6 @@ async function handleStripeWebhook(req, res, stripe) {
     console.error(`Error processing event: ${err.message}`);
     res.status(500).send('Internal error');
     //Err handling test
-    /*
     switch (err.type) {
   case 'StripeCardError':
     // A declined card error
@@ -114,7 +113,6 @@ async function handleStripeWebhook(req, res, stripe) {
     // Handle any other types of unexpected errors
     break;
 }
-    */
   }
   
 }

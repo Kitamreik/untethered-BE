@@ -33,6 +33,8 @@ let purchases = [];
 const adminRoutes = require("./routes/adminRoutes");
 const publicRoutes = require("./routes/publicRoutes");
 const { handleStripeWebhook } = require("./Ctrl/webhookCtrl");
+//Testing Stripe API
+const testStripe = require("./routes/tests");
 
 //Webhook: Route gets raw body, mount before express.json()
 app.post(
@@ -85,29 +87,28 @@ app.use(passport.session());
 
 
 //Route used in app
-//stripe
-app.use("/api/admin", adminRoutes);  //Success, getPurchases, getBookings, updateBookingStatus, adminSummary  
-app.use("/api", publicRoutes); //Success, bookSession, createPaymentIntent, logSession, cancelSession, createIntake, getIntakes
+//Testing stripe...
+app.use("/", testStripe);
+
+//When Stripe established...
+//app.use("/api", publicRoutes); //Success, bookSession, createPaymentIntent, logSession, cancelSession
+//---
+app.use("/api/admin", adminRoutes);  //Success, getPurchases, getBookings, updateBookingStatus, adminSummary, createIntake, getIntakes, deleteIntakes  
+
 
 //Err handling middleware
 app.use((err, req, res, next) => {
-    // if (err.code === 11000) {
-    //   return res.status(err.status || 400).json({
-    //     error: { message: "Already have an account? Try logging in." },
-    //     statusCode: err.status || 400,
-    //   });
-    // }
+    if (err.code === 11000) {
+      return res.status(err.status || 400).json({
+        error: { message: "Already have an account? Try logging in." },
+        statusCode: err.status || 400,
+      });
+    }
   
     return res.status(err.status || 500).json({
       error: { message: err.message || "Internal server error." },
       statusCode: err.status || 500,
     });
-});
-
-app.get("/", (req, res, next) => {
-res
-    .status(200)
-    .json({ success: { message: "This route points to the Home page" } });
 });
   
 app.listen(PORT, () => {

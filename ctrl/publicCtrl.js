@@ -75,6 +75,8 @@ async function logSession(req, res, next) {
       createdAt: new Date(),
     });
 
+    await booking.save();
+
     // notify admin
     await sendEmail({
       to: process.env.ADMIN_EMAIL,
@@ -82,10 +84,10 @@ async function logSession(req, res, next) {
       html: `<p>Purchase logged: ${purchase.packageName} - ${purchase.customerEmail}</p>`,
     });
 
-    res.json({ status: "ok", booking });
+    res.json({ success: true, booking });
   } catch (err) {
     console.error("logSession error:", err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ success: false, error: "Server error, failed to log session" });
   }
 }
 

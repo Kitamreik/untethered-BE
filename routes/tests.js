@@ -1,7 +1,12 @@
 const express = require("express");
 const router = express.Router();
+
+router.get("/", async (req, res, next) => {
+  res.status(200).json({ error: "Stripe API Health check successful" });
+})
+
 //Test --> REFACTOR TO ROUTES FOR CLEAN UP
-router.post("/api/create-payment-intent", async (req, res) => {
+router.post("/create-payment-intent", async (req, res, next) => {
     try {
       const { packageId, price } = req.body;
   
@@ -40,9 +45,10 @@ router.post("/api/create-payment-intent", async (req, res) => {
   });
 
 // --- Route 2: Log Session Purchase ---
-router.post("/api/log-session", (req, res) => {
+router.post("/log-session", (req, res, next) => {
     try {
-      const { packageId } = req.body;
+      //const { packageId } = req.body; //basic
+      const { packageId, price, paymentIntentId } = req.body;
   
       purchases.push({
         packageId,
@@ -57,7 +63,7 @@ router.post("/api/log-session", (req, res) => {
   });
   
   // --- Route 3: Book a Session ---
-  router.post("/api/book-session", (req, res) => {
+  router.post("/book-session", (req, res, next) => {
     try {
       const { packageId, sessionDate } = req.body;
   
@@ -74,7 +80,7 @@ router.post("/api/log-session", (req, res) => {
     }
   });
   
-  router.post("/api/cancel-payment-intent", async (req, res) => {
+  router.post("/cancel-payment-intent", async (req, res, next) => {
     try {
       const { paymentIntentId } = req.body;
       if (!paymentIntentId) {
