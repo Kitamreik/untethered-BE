@@ -41,7 +41,7 @@ async function createIntake(req, res, next) {
     console.log("BE intake received: ", req.body);
     const newIntake = new Intake(req.body);
     newIntake.save();
-    res.status(201).json(intake, {success: true});
+    res.status(201).json(newIntake, {success: true});
   } catch (err) {
     console.error("Error saving intake:", err);
     res.status(500).json({success: false, error: "Failed to save intake" });
@@ -57,6 +57,25 @@ async function getIntakes(req, res, next) {
   }
 }
 
+async function deleteIntake(req, res, next) {
+  try {
+    const { id } = req.params;
+    const deleted = await Intake.findByIdAndDelete(id);
+
+    if (!id) return res.status(400).json({ error: "Missing id param" });
+
+    if (!deleted) {
+      return res.status(404).json({ error: "Entry not found" });
+    };
+    console.log("All delete checks pass");
+
+    res.json({ success: true, message: "Entry deleted", id });
+    
+  } catch (err) {
+    console.error("deleteIntake error:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+}
 
 //Admin Summary for Email Automation
 async function adminSummary(req, res, next) {
@@ -79,4 +98,4 @@ async function adminSummary(req, res, next) {
 }
 
 
-module.exports = { getPurchases, getBookings, updateBookingStatus, adminSummary, createIntake, getIntakes };
+module.exports = { getPurchases, getBookings, updateBookingStatus, adminSummary, createIntake, getIntakes, deleteIntake };
