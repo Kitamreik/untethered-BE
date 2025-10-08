@@ -35,6 +35,13 @@ async function handleStripeWebhook(req, res, stripe) {
 
   try {
     event = stripe.webhooks.constructEvent(req.body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+
+    if (event.type === "payment_intent.succeeded") {
+    console.log("Payment success check");
+    // TODO: handle successful payment: save to DB, send email, etc.
+    }
+    res.status(200).json({ received: true });
+
   } catch (err) {
     console.error("Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);

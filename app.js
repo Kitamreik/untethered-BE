@@ -31,8 +31,8 @@ let purchases = [];
 
 //Routers
 const adminRoutes = require("./routes/adminRoutes");
-const publicRoutes = require("./routes/publicRoutes");
-const { handleStripeWebhook } = require("./Ctrl/webhookCtrl");
+const publicRoutes = require("./routes/stripeRoutes");
+const { handleStripeWebhook } = require("./ctrl/webhookCtrl");
 //Testing Stripe API
 const testStripe = require("./routes/tests");
 

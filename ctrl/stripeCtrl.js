@@ -10,7 +10,7 @@ const { addEventToCalendar, createEvent, deleteEvent } = require("../utils/calen
 
 async function createPaymentIntent(req, res, next) {
   try {
-    const { packageId, price, packageName, purchaserEmail } = req.body;
+    const { packageId, price, currency, packageName, purchaserEmail } = req.body;
 
     if (!packageId || !price) {
       return res.status(400).json({ error: "Missing packageId or price" });
@@ -21,6 +21,7 @@ async function createPaymentIntent(req, res, next) {
       currency: "usd",
       metadata: { packageId, purchaserEmail, packageName: packageName || "unknown" },
       receipt_email: purchaserEmail,
+      automatic_payment_methods: { enabled: true },
     });
 
     const purchase = await Purchase.create({
@@ -34,7 +35,7 @@ async function createPaymentIntent(req, res, next) {
       createdAt: new Date(),
     });
 
-    res.json({ clientSecret: paymentIntent.client_secret, id: paymentIntent.id, purchase });
+    return res.json({ clientSecret: paymentIntent.client_secret, id: paymentIntent.id, purchase });
   } catch (err) {
     console.error("createPaymentIntent error:", err);
     res.status(500).json({ error: "Server error" });
