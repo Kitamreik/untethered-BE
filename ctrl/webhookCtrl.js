@@ -1,7 +1,7 @@
 // server/controllers/webhookController.js - The webhook verifies Stripe signatures and creates a Purchase when a PaymentIntent succeeds. The payment metadata (like packageId) should be set when you create the PaymentIntent on your server.
 const Purchase = require("../models/Purchase");
 //Stripe
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const keyCheck = {
   sandbox: process.env.STRIPE_SECRET_KEY

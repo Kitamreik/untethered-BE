@@ -16,7 +16,7 @@ const { startAgenda } = require("./utils/agenda");
 const app = express();
 const PORT = process.env.PORT || 8080;
 //Stripe
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 
 //Internal check - shut down process if no key access

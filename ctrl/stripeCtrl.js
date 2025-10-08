@@ -2,7 +2,7 @@
 const Purchase = require("../models/Purchase");
 const Booking = require("../models/Booking");
 const Intake = require ("../models/Intake");
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+// const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 //Email Automation
 const { sendEmail } = require("../utils/emailService");
 const { agenda } = require("../utils/agenda");
