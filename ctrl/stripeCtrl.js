@@ -11,16 +11,44 @@ const { addEventToCalendar, createEvent, deleteEvent } = require("../utils/calen
 async function createPaymentIntent(req, res, next) {
   try {
     const { packageId, price, currency, packageName, purchaserEmail } = req.body;
+    //Mimic front end 
+      const packagePrices = {
+        //Supporting Tier
+        pkg1: 35000,
+        pkg2: 68600,
+        pkg3: 100800,
+        //Sustaining Tier
+        pkg4: 42500,
+        pkg5: 83300,
+        pkg6: 122400,
+        //Impact Tier
+        pkg7: 50000,
+        pkg8: 98000,
+        pkg9: 144000,
+      };
+
+      const amount = packagePrices[packageId];
+      console.log(amount, "amt tracking");
+      if (!amount) return res.status(400).json({ error: "Invalid package" });
 
     if (!packageId || !price) {
       return res.status(400).json({ error: "Missing packageId or price" });
     }
 
+    //https://docs.stripe.com/payments/quickstart-checkout-sessions
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: price,
-      currency: "usd",
-      metadata: { packageId, purchaserEmail, packageName: packageName || "unknown" },
-      receipt_email: purchaserEmail,
+      ui_mode: "custom",
+      //put items in array
+      line_items: [
+        {
+          amount: price,
+          currency: "usd",
+          metadata: { packageId, purchaserEmail, packageName: packageName || "unknown" },
+          receipt_email: purchaserEmail,
+          quantity: 1,
+        }
+      ],
+      
       automatic_payment_methods: { enabled: true },
     });
 
@@ -45,6 +73,13 @@ async function createPaymentIntent(req, res, next) {
 async function logSession(req, res, next) {
   try {
     const { packageId, packageName, amount = 0, currency = "usd", purchaserEmail, stripePaymentIntentId, status } = req.body;
+
+    purchases.push({
+        packageId,
+        timestamp: new Date().toISOString(),
+      });
+  
+      res.json({ message: "Session purchase logged", purchases });
     
     //OG: packageId, packageName, stripePaymentIntentId, purchaserEmail
 

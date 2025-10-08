@@ -4,7 +4,7 @@ const router = express.Router();
 const { bookSession, createPaymentIntent, logSession, cancelSession } = require("../ctrl/stripeCtrl");
 
 //Quick Check
-router.get("/", (req, res) => res.json({ status: 200 }));
+router.get("/", (req, res, next) => res.json({ status: 200 }));
 
 //Stripe
 router.post("/book-session", bookSession);
